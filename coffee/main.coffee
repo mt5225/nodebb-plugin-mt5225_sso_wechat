@@ -1,10 +1,175 @@
-User = module.parent.require('./user')
-Groups = module.parent.require('./groups')
-meta = module.parent.require('./meta')
-db = module.parent.require('../src/database')
-passport = module.parent.require('passport')
-fs = module.parent.require('fs')
-path = module.parent.require('path')
-nconf = module.parent.require('nconf')
-winston = module.parent.require('winston')
-async = module.parent.require('async')
+do (module) ->
+  'use strict'
+
+  ###
+    Welcome to the SSO OAuth plugin! If you're inspecting this code, you're probably looking to
+    hook up NodeBB with your existing OAuth endpoint.
+
+    Step 1: Fill in the "constants" section below with the requisite informaton. Either the "oauth"
+        or "oauth2" section needs to be filled, depending on what you set "type" to.
+
+    Step 2: Give it a whirl. If you see the congrats message, you're doing well so far!
+
+    Step 3: Customise the `parseUserReturn` method to normalise your user route's data return into
+        a format accepted by NodeBB. Instructions are provided there. (Line 137)
+
+    Step 4: If all goes well, you'll be able to login/register via your OAuth endpoint credentials.
+  ###
+
+  User = module.parent.require('./user')
+  Groups = module.parent.require('./groups')
+  meta = module.parent.require('./meta')
+  db = module.parent.require('../src/database')
+  passport = module.parent.require('passport')
+  fs = module.parent.require('fs')
+  path = module.parent.require('path')
+  nconf = module.parent.require('nconf')
+  winston = module.parent.require('winston')
+  async = module.parent.require('async')
+  constants = Object.freeze(
+    type: 'oauth2'
+    name: 'mt5225'
+    oauth2:
+      authorizationURL: 'http://localhost:3000/dialog/authorize'
+      tokenURL: 'http://localhost:3000/oauth/token'
+      clientID: 'ward-steward-2'
+      clientSecret: 'something truly secret'
+    userRoute: 'http://localhost:3000/api/userinfo')
+  configOk = false
+  OAuth = {}
+  passportOAuth = undefined
+  opts = undefined
+  if !constants.name
+    winston.error '[sso-oauth] Please specify a name for your OAuth provider (library.js:32)'
+  else if !constants.type or constants.type != 'oauth' and constants.type != 'oauth2'
+    winston.error '[sso-oauth] Please specify an OAuth strategy to utilise (library.js:31)'
+  else if !constants.userRoute
+    winston.error '[sso-oauth] User Route required (library.js:31)'
+  else
+    configOk = true
+
+  OAuth.getStrategy = (strategies, callback) ->
+    if configOk
+      passportOAuth = require('passport-oauth')['OAuth2Strategy']
+      if constants.type == 'oauth2'
+        # OAuth 2 options
+        opts = constants.oauth2
+        opts.callbackURL = nconf.get('url') + '/auth/' + constants.name + '/callback'
+
+        passportOAuth.Strategy::userProfile = (accessToken, done) ->
+          @_oauth2.get constants.userRoute, accessToken, (err, body, res) ->
+            if err
+              return done(new InternalOAuthError('failed to fetch user profile', err))
+            try
+              json = JSON.parse(body)
+              OAuth.parseUserReturn json, (err, profile) ->
+                if err
+                  return done(err)
+                profile.provider = constants.name
+                done null, profile
+                return
+            catch e
+              done e
+            return
+          return
+
+      passport.use constants.name, new passportOAuth(opts, (token, secret, profile, done) ->
+        OAuth.login {
+          oAuthid: profile.id
+          handle: profile.displayName
+          email: profile.emails[0].value
+          isAdmin: profile.isAdmin
+        }, (err, user) ->
+          if err
+            return done(err)
+          done null, user
+          return
+        return
+      )
+      strategies.push
+        name: constants.name
+        url: '/auth/' + constants.name
+        callbackURL: '/auth/' + constants.name + '/callback'
+        icon: 'fa-check-square'
+        scope: (constants.scope or '').split(',')
+      callback null, strategies
+    else
+      callback new Error('OAuth Configuration is invalid')
+    return
+
+  OAuth.parseUserReturn = (data, callback) ->
+    profile = {}
+    console.log data
+    profile.id = data.user_id
+    profile.displayName = data.name
+    profile.emails = [ { value: 'mt5225@gmail.com' } ]
+    process.stdout.write '===\nAt this point, you\'ll need to customise the above section to id, displayName, and emails into the "profile" object.\n==='
+    #return callback(new Error('Congrats! So far so good -- please see server log for details'));
+    callback null, profile
+    return
+
+  OAuth.login = (payload, callback) ->
+    OAuth.getUidByOAuthid payload.oAuthid, (err, uid) ->
+      if err
+        return callback(err)
+      if uid != null
+        # Existing User
+        callback null, uid: uid
+      else
+        # New User
+
+        success = (uid) ->
+          # Save provider-specific information to the user
+          User.setUserField uid, constants.name + 'Id', payload.oAuthid
+          db.setObjectField constants.name + 'Id:uid', payload.oAuthid, uid
+          if payload.isAdmin
+            Groups.join 'administrators', uid, (err) ->
+              callback null, uid: uid
+              return
+          else
+            callback null, uid: uid
+          return
+
+        User.getUidByEmail payload.email, (err, uid) ->
+          if err
+            return callback(err)
+          if !uid
+            User.create {
+              username: payload.handle
+              email: payload.email
+            }, (err, uid) ->
+              if err
+                return callback(err)
+              success uid
+              return
+          else
+            success uid
+            # Existing account -- merge
+          return
+      return
+    return
+
+  OAuth.getUidByOAuthid = (oAuthid, callback) ->
+    db.getObjectField constants.name + 'Id:uid', oAuthid, (err, uid) ->
+      if err
+        return callback(err)
+      callback null, uid
+      return
+    return
+
+  OAuth.deleteUserData = (uid, callback) ->
+    async.waterfall [
+      async.apply(User.getUserField, uid, constants.name + 'Id')
+      (oAuthIdToDelete, next) ->
+        db.deleteObjectField constants.name + 'Id:uid', oAuthIdToDelete, next
+        return
+    ], (err) ->
+      if err
+        winston.error '[sso-oauth] Could not remove OAuthId data for uid ' + uid + '. Error: ' + err
+        return callback(err)
+      callback null, uid
+      return
+    return
+
+  module.exports = OAuth
+  return

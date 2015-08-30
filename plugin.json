@@ -1,6 +1,6 @@
 {
   "id": "nodebb-plugin-mt5225_sso_wechat",
-  "name": "plugin_mt5225_sso_wechat",
+  "name": "nodebb-plugin-mt5225_sso_wechat",
   "description": "plugin_mt5225_sso_wechat",
   "url": "https://github.com/mt5225/nodebb-plugin-mt5225_sso_wechat",
   "library": "./index.js",

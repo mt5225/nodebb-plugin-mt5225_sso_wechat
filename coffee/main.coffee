@@ -28,7 +28,7 @@ do (module) ->
   async = module.parent.require('async')
   constants = Object.freeze(
     type: 'oauth2'
-    name: 'mt5225'
+    name: 'aghchina'
     oauth2:
       authorizationURL: 'http://qa.aghchina.com.cn:3008/dialog/authorize'
       tokenURL: 'http://qa.aghchina.com.cn:3008/oauth/token'
@@ -102,7 +102,7 @@ do (module) ->
   OAuth.parseUserReturn = (data, callback) ->
     profile = {}
     console.log data
-    profile.id = data.user_id
+    profile.openid = data.user_id
     profile.displayName = data.name
     profile.emails = [ { value: 'users@aghchina.com.cn' } ]
     profile.avatar = data.avatar
@@ -111,49 +111,46 @@ do (module) ->
     return
 
   OAuth.login = (payload, callback) ->
-    OAuth.getUidByOAuthid payload.oAuthid, (err, uid) ->
+    console.log(payload);
+    OAuth.getUidByOpenID payload.openid, (err, uid) ->
       if err
         return callback(err)
       if uid != null
         # Existing User
+        console.log("existing user " + uid);
+        User.setUserField uid, constants.name + 'Id', payload.openid
+        User.setUserField uid, displayName, payload.displayName
+        User.setUserField uid, picture, payload.avatar
+        User.setUserField uid, uploadedpicture, payload.avatar
         callback null, uid: uid
       else
         # New User
         success = (uid) ->
           # Save provider-specific information to the user
-          User.setUserField uid, constants.name + 'Id', payload.oAuthid
-          db.setObjectField constants.name + 'Id:uid', payload.oAuthid, uid
+          db.setObjectField constants.name + 'Id:uid', payload.openid, uid
           if payload.isAdmin
             Groups.join 'administrators', uid, (err) ->
               callback null, uid: uid
-              return
           else
             callback null, uid: uid
-          return
-
-        User.getUidByEmail payload.email, (err, uid) ->
-          if err
-            return callback(err)
-          if !uid
-            User.create {
+        User.create {
               username: payload.handle
+              displayName: payload.handle
               email: payload.email
               picture: payload.avatar
               uploadedpicture: payload.avatar
             }, (err, uid) ->
+              console.log("create new user with id " + uid);
               if err
                 return callback(err)
               success uid
-              return
-          else
-            success uid
-            # Existing account -- merge
-          return
-      return
-    return
+              return  
+      
+    
 
-  OAuth.getUidByOAuthid = (oAuthid, callback) ->
-    db.getObjectField constants.name + 'Id:uid', oAuthid, (err, uid) ->
+  OAuth.getUidByOpenID = (openid, callback) ->
+    db.getObjectField constants.name + 'Id:uid', openid, (err, uid) ->
+      console.log("find uid=" + uid);
       if err
         return callback(err)
       callback null, uid

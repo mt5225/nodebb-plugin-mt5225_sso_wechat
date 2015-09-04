@@ -62,6 +62,7 @@ do (module) ->
               return done(new InternalOAuthError('failed to fetch user profile', err))
             try
               json = JSON.parse(body)
+              console.log json
               OAuth.parseUserReturn json, (err, profile) ->
                 if err
                   return done(err)
@@ -78,6 +79,7 @@ do (module) ->
           oAuthid: profile.id
           handle: profile.displayName
           email: profile.emails[0].value
+          avatar: profile.avatar
           isAdmin: profile.isAdmin
         }, (err, user) ->
           if err
@@ -102,9 +104,9 @@ do (module) ->
     console.log data
     profile.id = data.user_id
     profile.displayName = data.name
-    profile.emails = [ { value: 'mt5225@gmail.com' } ]
-    process.stdout.write '===\nAt this point, you\'ll need to customise the above section to id, displayName, and emails into the "profile" object.\n==='
-    #return callback(new Error('Congrats! So far so good -- please see server log for details'));
+    profile.emails = [ { value: 'users@aghchina.com.cn' } ]
+    profile.avatar = data.avatar
+    console.log '===\nAt this point, you\'ll need to customise the above section to id, displayName, and emails into the "profile" object.\n==='
     callback null, profile
     return
 
@@ -117,7 +119,6 @@ do (module) ->
         callback null, uid: uid
       else
         # New User
-
         success = (uid) ->
           # Save provider-specific information to the user
           User.setUserField uid, constants.name + 'Id', payload.oAuthid
@@ -137,6 +138,8 @@ do (module) ->
             User.create {
               username: payload.handle
               email: payload.email
+              picture: payload.avatar
+              uploadedpicture: payload.avatar
             }, (err, uid) ->
               if err
                 return callback(err)

@@ -30,11 +30,11 @@ do (module) ->
     type: 'oauth2'
     name: 'mt5225'
     oauth2:
-      authorizationURL: 'http://localhost:3000/dialog/authorize'
-      tokenURL: 'http://localhost:3000/oauth/token'
+      authorizationURL: 'http://localhost:3008/dialog/authorize'
+      tokenURL: 'http://localhost:3008/oauth/token'
       clientID: 'ward-steward-2'
       clientSecret: 'something truly secret'
-    userRoute: 'http://localhost:3000/api/userinfo')
+    userRoute: 'http://localhost:3008/api/userinfo')
   configOk = false
   OAuth = {}
   passportOAuth = undefined
@@ -90,7 +90,7 @@ do (module) ->
         name: constants.name
         url: '/auth/' + constants.name
         callbackURL: '/auth/' + constants.name + '/callback'
-        icon: 'fa-check-square'
+        icon: 'fa-circle-thin'
         scope: (constants.scope or '').split(',')
       callback null, strategies
     else

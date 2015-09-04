@@ -30,11 +30,11 @@ do (module) ->
     type: 'oauth2'
     name: 'mt5225'
     oauth2:
-      authorizationURL: 'http://localhost:3008/dialog/authorize'
-      tokenURL: 'http://localhost:3008/oauth/token'
+      authorizationURL: 'http://qa.aghchina.com.cn:3008/dialog/authorize'
+      tokenURL: 'http://qa.aghchina.com.cn:3008/oauth/token'
       clientID: 'ward-steward-2'
       clientSecret: 'something truly secret'
-    userRoute: 'http://localhost:3008/api/userinfo')
+    userRoute: 'http://qa.aghchina.com.cn:3008/api/userinfo')
   configOk = false
   OAuth = {}
   passportOAuth = undefined

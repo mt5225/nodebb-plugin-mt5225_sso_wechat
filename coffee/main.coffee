@@ -26,6 +26,7 @@ do (module) ->
   nconf = module.parent.require('nconf')
   winston = module.parent.require('winston')
   async = module.parent.require('async')
+  emojiText = module.parent.require("emoji-text");
   constants = Object.freeze(
     type: 'oauth2'
     name: 'aghchina'
@@ -105,27 +106,29 @@ do (module) ->
     return
 
   OAuth.login = (payload, callback) ->
-    console.log(payload);
+    console.log payload
+    username = emojiText.convert(payload.displayName)
+    console.log "username =  #{username}"
     OAuth.getUidByOpenID payload.openid, (err, uid) ->
       if err
         return callback(err)
       if uid != null
         # Existing User
         console.log("found existing user " + uid);
-        User.setUserField uid, 'username', payload.displayName
-        User.setUserField uid, 'fullname', payload.displayName
+        User.setUserField uid, 'username', username
+        User.setUserField uid, 'fullname', username
         User.setUserField uid, 'picture', payload.avatar
         User.setUserField uid, 'uploadedpicture', payload.avatar
         callback null, uid: uid
       else
         # New User
         User.create {
-          username: payload.displayName
+          username: username
           #email: payload.emails
         }, (err, uid) ->
           console.log("create new user with id " + uid);
           db.setObjectField constants.name + 'Id:uid', payload.openid, uid
-          User.setUserField uid, 'fullname', payload.displayName
+          User.setUserField uid, 'fullname', username
           User.setUserField uid, 'picture', payload.avatar
           User.setUserField uid, 'uploadedpicture', payload.avatar
           if err

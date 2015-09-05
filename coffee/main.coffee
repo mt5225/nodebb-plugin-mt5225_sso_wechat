@@ -107,7 +107,10 @@ do (module) ->
 
   OAuth.login = (payload, callback) ->
     console.log payload
-    username = emojiText.convert(payload.displayName)
+    emojiOption =
+      before: '_'
+      after: '_'
+    username = emojiText.convert(payload.displayName, emojiOption)
     console.log "username =  #{username}"
     OAuth.getUidByOpenID payload.openid, (err, uid) ->
       if err

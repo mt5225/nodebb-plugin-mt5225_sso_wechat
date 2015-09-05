@@ -75,13 +75,7 @@ do (module) ->
           return
 
       passport.use constants.name, new passportOAuth(opts, (token, secret, profile, done) ->
-        OAuth.login {
-          oAuthid: profile.id
-          handle: profile.displayName
-          email: profile.emails[0].value
-          avatar: profile.avatar
-          isAdmin: profile.isAdmin
-        }, (err, user) ->
+        OAuth.login profile, (err, user) ->
           if err
             return done(err)
           done null, user
@@ -101,7 +95,6 @@ do (module) ->
 
   OAuth.parseUserReturn = (data, callback) ->
     profile = {}
-    console.log data
     profile.openid = data.user_id
     profile.displayName = data.name
     profile.emails = [ { value: 'users@aghchina.com.cn' } ]
@@ -117,34 +110,25 @@ do (module) ->
         return callback(err)
       if uid != null
         # Existing User
-        console.log("existing user " + uid);
-        User.setUserField uid, constants.name + 'Id', payload.openid
-        User.setUserField uid, displayName, payload.displayName
+        console.log("found existing user " + uid);
+        User.setUserField uid, username, payload.displayName
         User.setUserField uid, picture, payload.avatar
         User.setUserField uid, uploadedpicture, payload.avatar
         callback null, uid: uid
       else
-        # New User
-        success = (uid) ->
-          # Save provider-specific information to the user
-          db.setObjectField constants.name + 'Id:uid', payload.openid, uid
-          if payload.isAdmin
-            Groups.join 'administrators', uid, (err) ->
-              callback null, uid: uid
-          else
-            callback null, uid: uid
+        # New User          
         User.create {
               username: payload.handle
-              displayName: payload.handle
               email: payload.email
-              picture: payload.avatar
-              uploadedpicture: payload.avatar
-            }, (err, uid) ->
-              console.log("create new user with id " + uid);
-              if err
-                return callback(err)
-              success uid
-              return  
+        }, (err, uid) ->
+          console.log("create new user with id " + uid);
+          db.setObjectField constants.name + 'Id:uid', payload.openid, uid
+          User.setUserField uid, picture, payload.avatar
+          User.setUserField uid, uploadedpicture, payload.avatar
+          if err
+            return callback(err)
+          callback null, uid: uid
+                
       
     
 

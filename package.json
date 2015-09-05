@@ -1,7 +1,7 @@
 {
   "id": "nodebb-plugin-mt5225_sso_wechat",
   "name": "nodebb-plugin-mt5225_sso_wechat",
-  "version": "0.0.1-10",
+  "version": "0.0.1-11",
   "description": "nodebb-plugin-mt5225_sso_wechat",
   "main": "index.js",
   "repository": {

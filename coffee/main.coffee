@@ -112,18 +112,20 @@ do (module) ->
       if uid != null
         # Existing User
         console.log("found existing user " + uid);
-        User.setUserField uid, 'username', payload.displayName
+        User.setUserField uid, 'username', payload.openid
+        User.setUserField uid, 'fullname', payload.displayName
         User.setUserField uid, 'picture', payload.avatar
         User.setUserField uid, 'uploadedpicture', payload.avatar
         callback null, uid: uid
       else
         # New User
         User.create {
-          username: payload.displayName
+          username: payload.openid
           email: payload.email
         }, (err, uid) ->
           console.log("create new user with id " + uid);
           db.setObjectField constants.name + 'Id:uid', payload.openid, uid
+          User.setUserField uid, 'fullname', payload.displayName
           User.setUserField uid, 'picture', payload.avatar
           User.setUserField uid, 'uploadedpicture', payload.avatar
           if err

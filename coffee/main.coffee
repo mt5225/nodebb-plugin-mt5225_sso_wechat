@@ -98,7 +98,7 @@ do (module) ->
     console.log data
     profile.openid = data.user_id
     profile.displayName = data.name
-    profile.emails = [ { value: 'users@aghchina.com.cn' } ]
+    #profile.emails = [ { value: 'users@aghchina.com.cn' } ]
     profile.avatar = data.avatar
     console.log '===\nAt this point, you\'ll need to customise the above section to id, displayName, and emails into the "profile" object.\n==='
     callback null, profile
@@ -112,22 +112,20 @@ do (module) ->
       if uid != null
         # Existing User
         console.log("found existing user " + uid);
-        User.setUserField uid, 'username', payload.openid
+        User.setUserField uid, 'username', payload.displayName
         User.setUserField uid, 'fullname', payload.displayName
-        User.setUserField uid, 'location', payload.displayName
         User.setUserField uid, 'picture', payload.avatar
         User.setUserField uid, 'uploadedpicture', payload.avatar
         callback null, uid: uid
       else
         # New User
         User.create {
-          username: payload.openid
-          email: payload.email
+          username: payload.displayName
+          #email: payload.emails
         }, (err, uid) ->
           console.log("create new user with id " + uid);
           db.setObjectField constants.name + 'Id:uid', payload.openid, uid
           User.setUserField uid, 'fullname', payload.displayName
-          User.setUserField uid, 'location', payload.displayName
           User.setUserField uid, 'picture', payload.avatar
           User.setUserField uid, 'uploadedpicture', payload.avatar
           if err

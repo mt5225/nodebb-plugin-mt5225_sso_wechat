@@ -95,6 +95,7 @@ do (module) ->
 
   OAuth.parseUserReturn = (data, callback) ->
     profile = {}
+    console.log data
     profile.openid = data.user_id
     profile.displayName = data.name
     profile.emails = [ { value: 'users@aghchina.com.cn' } ]
@@ -116,10 +117,10 @@ do (module) ->
         User.setUserField uid, uploadedpicture, payload.avatar
         callback null, uid: uid
       else
-        # New User          
+        # New User
         User.create {
-              username: payload.handle
-              email: payload.email
+          username: payload.displayName
+          email: payload.email
         }, (err, uid) ->
           console.log("create new user with id " + uid);
           db.setObjectField constants.name + 'Id:uid', payload.openid, uid
@@ -127,8 +128,7 @@ do (module) ->
           User.setUserField uid, uploadedpicture, payload.avatar
           if err
             return callback(err)
-          callback null, uid: uid
-                
+          callback null, uid: uid 
       
     
 

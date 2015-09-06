@@ -26,7 +26,7 @@ do (module) ->
   nconf = module.parent.require('nconf')
   winston = module.parent.require('winston')
   async = module.parent.require('async')
-  emojiText = module.parent.require("emoji-text");
+  emojiText = module.parent.require("emoji-text")
   constants = Object.freeze(
     type: 'oauth2'
     name: 'aghchina'
@@ -130,7 +130,7 @@ do (module) ->
           #email: payload.emails
         }, (err, uid) ->
           console.log("create new user with id " + uid);
-          db.setObjectField constants.name + 'Id:uid', payload.openid, uid
+          db.setObjectField 'wxid:uid', payload.openid, uid
           User.setUserField uid, 'fullname', username
           User.setUserField uid, 'picture', payload.avatar
           User.setUserField uid, 'uploadedpicture', payload.avatar
@@ -141,7 +141,7 @@ do (module) ->
     
 
   OAuth.getUidByOpenID = (openid, callback) ->
-    db.getObjectField constants.name + 'Id:uid', openid, (err, uid) ->
+    db.getObjectField 'wxid:uid', openid, (err, uid) ->
       console.log("find uid=" + uid);
       if err
         return callback(err)
@@ -153,7 +153,7 @@ do (module) ->
     async.waterfall [
       async.apply(User.getUserField, uid, constants.name + 'Id')
       (oAuthIdToDelete, next) ->
-        db.deleteObjectField constants.name + 'Id:uid', oAuthIdToDelete, next
+        db.deleteObjectField 'wxid:uid', oAuthIdToDelete, next
         return
     ], (err) ->
       if err
